@@ -39,9 +39,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.ensureVisible()
 	case tea.KeyPressMsg:
-		if key.Matches(msg, keys.Quit) {
+		switch {
+		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
+		case key.Matches(msg, keys.Down):
+			m.move(1)
+		case key.Matches(msg, keys.Up):
+			m.move(-1)
+		case key.Matches(msg, keys.Toggle):
+			m.toggle()
+		case key.Matches(msg, keys.Left):
+			m.left()
+		case key.Matches(msg, keys.Right):
+			m.right()
+		case key.Matches(msg, keys.Top):
+			m.topRow()
+		case key.Matches(msg, keys.Bottom):
+			m.bottomRow()
+		case key.Matches(msg, keys.PageDown):
+			m.page(1)
+		case key.Matches(msg, keys.PageUp):
+			m.page(-1)
+		case key.Matches(msg, keys.HalfDown):
+			m.halfPage(1)
+		case key.Matches(msg, keys.HalfUp):
+			m.halfPage(-1)
+		case key.Matches(msg, keys.Parent):
+			m.focusParent()
+		case key.Matches(msg, keys.NextSib):
+			m.focusSibling(1)
+		case key.Matches(msg, keys.PrevSib):
+			m.focusSibling(-1)
 		}
 	}
 
@@ -72,7 +102,7 @@ func (m Model) render() string {
 		viewerHeight = max(0, m.height-1)
 	}
 
-	start := clamp(m.top, 0, max(0, len(rows)-viewerHeight))
+	start := clamp(m.top, max(0, len(rows)-viewerHeight))
 	lines := make([]string, 0, viewerHeight+1)
 	for i := 0; i < viewerHeight; i++ {
 		rowIdx := start + i
@@ -106,12 +136,12 @@ func indexOfNodeID(rows []jsondoc.Row, id int) int {
 	return -1
 }
 
-func clamp(v int, low int, high int) int {
-	if high < low {
-		return low
+func clamp(v int, high int) int {
+	if high < 0 {
+		return 0
 	}
-	if v < low {
-		return low
+	if v < 0 {
+		return 0
 	}
 	if v > high {
 		return high
