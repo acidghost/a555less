@@ -13,4 +13,5 @@ var (
 	punctStyle     = lipgloss.NewStyle().Faint(true)
 	countStyle     = lipgloss.NewStyle().Faint(true)
 	dimStyle       = lipgloss.NewStyle().Faint(true)
+	statusStyle    = lipgloss.NewStyle().Reverse(true)
 )

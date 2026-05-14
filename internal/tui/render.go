@@ -14,6 +14,41 @@ const (
 	previewMaxDepth = 1
 )
 
+func renderStatus(path string, filename string, focusIndex int, totalRows int, width int) string {
+	if filename == "" {
+		filename = "stdin"
+	}
+	if focusIndex < 0 {
+		focusIndex = 0
+	}
+	if totalRows < 0 {
+		totalRows = 0
+	}
+
+	right := fmt.Sprintf("%s  %d/%d", filename, focusIndex+1, totalRows)
+	var text string
+	if width > 0 {
+		leftWidth := ansi.StringWidth(path)
+		rightWidth := ansi.StringWidth(right)
+		if leftWidth+1+rightWidth <= width {
+			text = path + strings.Repeat(" ", width-leftWidth-rightWidth) + right
+		} else {
+			text = ansi.Truncate(path+" "+right, width, "…")
+		}
+	} else {
+		text = path + " " + right
+	}
+	return statusStyle.Render(text)
+}
+
+func fillerRow(width int) string {
+	line := dimStyle.Render("~")
+	if width > 0 {
+		line = ansi.Truncate(line, width, "…")
+	}
+	return line
+}
+
 func renderRow(row jsondoc.Row, focused bool, width int) string {
 	n := row.Node
 	line := strings.Repeat("  ", row.Depth) + renderIndicator(n, focused) + renderLabel(n) + renderValue(n)
