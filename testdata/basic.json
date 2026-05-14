@@ -1,0 +1,25 @@
+{
+  "b": 1,
+  "a": 2,
+  "dup": "first",
+  "dup": "second",
+  "users": [
+    {
+      "id": 1,
+      "name": "alice",
+      "tags": ["go", "json"],
+      "meta": {
+        "active": true,
+        "score": 1e-9
+      }
+    },
+    {
+      "id": 2,
+      "name": "bob\nbuilder",
+      "weird key": null
+    }
+  ],
+  "emptyObject": {},
+  "emptyArray": [],
+  "longString": "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789"
+}
