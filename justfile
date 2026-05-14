@@ -15,6 +15,7 @@ smoke_json := 'testdata/basic.json'
 tmux_session := program+'-smoke'
 tmux_width := '100'
 tmux_height := '30'
+tmux_bin := 'build/'+program+'-tmux'
 
 _help:
     @just --list
@@ -91,9 +92,9 @@ tmux-smoke file=smoke_json session=tmux_session width=tmux_width height=tmux_hei
 
     deadline=$((SECONDS + 5))
     pane=""
-    until pane=$(tmux capture-pane -p -t "$target" 2>/dev/null) && grep -q 'Phase 1 skeleton' <<<"$pane"; do
+    until pane=$(tmux capture-pane -p -t "$target" 2>/dev/null) && grep -q 'users' <<<"$pane"; do
       if (( SECONDS >= deadline )); then
-        echo "Timed out waiting for Phase 1 TUI skeleton to render" >&2
+        echo "Timed out waiting for TUI tree to render" >&2
         printf '%s\n' "$pane" >&2
         exit 1
       fi
