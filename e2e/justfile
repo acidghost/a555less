@@ -1,0 +1,25 @@
+file := 'testdata/basic.json'
+session := 'a555less-e2e'
+width := '100'
+height := '30'
+
+_help:
+    @just --list --list-heading $'Make sure you build the binary first\n\ne2e:\n'
+
+# Run e2e test suite.
+run: \
+    collapse \
+    navigation \
+    smoke
+
+# Test.
+collapse:
+    ./test_collapse.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test.
+navigation:
+    ./test_navigation.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test.
+smoke:
+    ./test_smoke.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
