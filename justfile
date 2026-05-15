@@ -40,6 +40,9 @@ run *args:
 dev-stdin file=smoke_json:
     go run . - < {{file}}
 
+watch *args:
+    watchexec --restart -- 'date; go run . {{args}}'
+
 # Unit tests for parser/rendering/navigation helpers.
 test:
     go test ./...
