@@ -58,11 +58,12 @@ lint:
 
 # Format shell files
 fmt-sh:
-    shfmt -w e2e {{shell_files}}
+    shfmt --write {{shell_files}}
 
 # Check shell linter
 lint-sh:
-    shellcheck -x {{shell_files}}
+    shfmt --diff {{shell_files}}
+    shellcheck --external-sources {{shell_files}}
 
 # Install into GOBIN
 install: build

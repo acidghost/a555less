@@ -32,8 +32,11 @@ jobs:
         with:
           version: ${{ env.MISE_VERSION }}
 
-      - name: Run linter
+      - name: Run Go linter
         run: just lint
+
+      - name: Run shell linter
+        run: just lint-sh
 
       - name: Unit tests
         run: just test
