@@ -11,6 +11,8 @@ ldflags := '-s -w -X main.buildVersion='+version \
 goos := if os() == 'macos' { 'darwin' } else { os() }
 goarch := if arch() == 'aarch64' { 'arm64' } else if arch() == 'x86_64' { 'amd64' } else { arch() }
 
+shell_files := shell("find . -name '*.sh' -not -path '*/vendor/*' | tr '\\n' ' '")
+
 _help:
     @just --list
 
@@ -50,9 +52,17 @@ vendor:
 fmt:
     go fmt ./...
 
-# Check linter
+# Check Go linter
 lint:
     golangci-lint run
+
+# Format shell files
+fmt-sh:
+    shfmt -w e2e {{shell_files}}
+
+# Check shell linter
+lint-sh:
+    shellcheck -x {{shell_files}}
 
 # Install into GOBIN
 install: build
