@@ -41,5 +41,8 @@ jobs:
       - name: Unit tests
         run: just test
 
+      - name: Build
+        run: just build
+
       - name: E2E tests
-        run: just --one build e2e/run
+        run: just e2e/run
