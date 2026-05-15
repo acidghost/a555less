@@ -42,4 +42,4 @@ jobs:
         run: just test
 
       - name: E2E tests
-        run: just build e2e/run
+        run: just --one build e2e/run
