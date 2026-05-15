@@ -1,6 +1,9 @@
 package jsondoc
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParsePreservesObjectKeyOrder(t *testing.T) {
 	doc, err := Parse([]byte(`{"b":1,"a":2,"c":3}`), "order.json")
@@ -103,6 +106,16 @@ func TestParsePreservesNumberSpelling(t *testing.T) {
 func TestParseRejectsTrailingValue(t *testing.T) {
 	if _, err := Parse([]byte(`{"a":1} {"b":2}`), "trailing.json"); err == nil {
 		t.Fatal("Parse() error = nil, want trailing value error")
+	}
+}
+
+func TestParseSyntaxErrorIncludesLineAndColumn(t *testing.T) {
+	_, err := Parse([]byte("{\n  \"a\": \n}"), "invalid.json")
+	if err == nil {
+		t.Fatal("Parse() error = nil, want syntax error")
+	}
+	if !strings.Contains(err.Error(), "line 2, column 8") {
+		t.Fatalf("Parse() error = %q, want line and column", err.Error())
 	}
 }
 

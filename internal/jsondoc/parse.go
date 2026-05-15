@@ -3,6 +3,7 @@ package jsondoc
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -19,7 +20,7 @@ func Parse(data []byte, filename string) (*Document, error) {
 
 	root, err := doc.parseValue(dec, nil, "", false, 0)
 	if err != nil {
-		return nil, fmt.Errorf("invalid JSON: %w", err)
+		return nil, invalidJSONError(data, err)
 	}
 	doc.Root = root
 
@@ -28,7 +29,7 @@ func Parse(data []byte, filename string) (*Document, error) {
 		if err == nil {
 			return nil, fmt.Errorf("invalid JSON: unexpected trailing token %v", tok)
 		}
-		return nil, fmt.Errorf("invalid JSON: %w", err)
+		return nil, invalidJSONError(data, err)
 	}
 
 	return doc, nil
@@ -110,6 +111,41 @@ func (d *Document) parseArray(dec *json.Decoder, parent *Node, key string, hasKe
 		return nil, err
 	}
 	return n, nil
+}
+
+func invalidJSONError(data []byte, err error) error {
+	if errors.Is(err, io.EOF) {
+		return fmt.Errorf("invalid JSON: unexpected end of input")
+	}
+
+	var syntaxErr *json.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		line, col := lineColumn(data, syntaxErr.Offset)
+		return fmt.Errorf("invalid JSON at line %d, column %d: %w", line, col, err)
+	}
+
+	return fmt.Errorf("invalid JSON: %w", err)
+}
+
+func lineColumn(data []byte, offset int64) (int, int) {
+	if offset < 1 {
+		return 1, 1
+	}
+
+	line := 1
+	col := 1
+	for i, b := range data {
+		if int64(i) >= offset-1 {
+			break
+		}
+		if b == '\n' {
+			line++
+			col = 1
+			continue
+		}
+		col++
+	}
+	return line, col
 }
 
 func expectDelim(dec *json.Decoder, want json.Delim) error {
