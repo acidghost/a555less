@@ -157,7 +157,8 @@ func renderValue(n *jsondoc.Node) string {
 		return nullStyle.Render("null")
 	}
 	if n.IsContainer() {
-		return countStyle.Render(fmt.Sprintf("(%d) ", len(n.Children))) + renderPreview(n, previewMaxItems, previewMaxDepth)
+		return countStyle.Render(fmt.Sprintf("(%d) ", len(n.Children))) +
+			dimStyle.Render(jsondoc.Preview(n, previewMaxItems, previewMaxDepth))
 	}
 	return renderPrimitive(n)
 }
@@ -176,58 +177,4 @@ func renderPrimitive(n *jsondoc.Node) string {
 	default:
 		return text
 	}
-}
-
-func renderPreview(n *jsondoc.Node, maxItems int, maxDepth int) string {
-	if n == nil {
-		return nullStyle.Render("null")
-	}
-	if !n.IsContainer() {
-		return renderPrimitive(n)
-	}
-	if maxDepth <= 0 {
-		switch n.Kind {
-		case jsondoc.KindObject:
-			return punctStyle.Render("{…}")
-		case jsondoc.KindArray:
-			return punctStyle.Render("[…]")
-		}
-	}
-
-	switch n.Kind {
-	case jsondoc.KindObject:
-		return renderContainerPreview(n, maxItems, maxDepth, "{", "}")
-	case jsondoc.KindArray:
-		return renderContainerPreview(n, maxItems, maxDepth, "[", "]")
-	default:
-		return renderPrimitive(n)
-	}
-}
-
-func renderContainerPreview(n *jsondoc.Node, maxItems, maxDepth int, openD, closeD string) string {
-	if len(n.Children) == 0 {
-		return punctStyle.Render(openD + closeD)
-	}
-	if maxItems < 0 {
-		maxItems = 0
-	}
-
-	parts := make([]string, 0, min(len(n.Children), maxItems)+1)
-	limit := min(len(n.Children), maxItems)
-	for i := range limit {
-		child := n.Children[i]
-		part := ""
-		if n.Kind == jsondoc.KindObject {
-			part += keyStyle.Render(jsondoc.FormatKey(child.Key)) + punctStyle.Render(": ")
-		}
-		part += renderPreview(child, maxItems, maxDepth-1)
-		parts = append(parts, part)
-	}
-	if limit < len(n.Children) {
-		parts = append(parts, punctStyle.Render("…"))
-	}
-
-	return punctStyle.Render(openD) +
-		strings.Join(parts, punctStyle.Render(", ")) +
-		punctStyle.Render(closeD)
 }
