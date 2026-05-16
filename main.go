@@ -1,12 +1,15 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/acidghost/a555less/internal/jsondoc"
 	"github.com/acidghost/a555less/internal/tui"
@@ -16,6 +19,14 @@ var (
 	buildVersion string
 	buildCommit  string
 	buildDate    string
+)
+
+//go:embed banner.txt
+var banner string
+
+var (
+	errNoFile      = errors.New("missing input file; pass a JSON file or pipe JSON on stdin")
+	errTooManyArgs = errors.New("too many arguments")
 )
 
 func main() {
@@ -29,7 +40,7 @@ func run(args []string) error {
 	if len(args) == 1 {
 		switch args[0] {
 		case "-h", "--help":
-			printUsage(os.Stdout)
+			printUsage()
 			return nil
 		case "--version":
 			fmt.Printf("Version: %s\nCommit:  %s\nDate:    %s\n", buildVersion, buildCommit, buildDate)
@@ -39,6 +50,9 @@ func run(args []string) error {
 
 	filename, data, err := readInput(args)
 	if err != nil {
+		if errors.Is(err, errNoFile) || errors.Is(err, errTooManyArgs) {
+			printUsage()
+		}
 		return err
 	}
 
@@ -59,7 +73,7 @@ func readInput(args []string) (string, []byte, error) {
 	switch len(args) {
 	case 0:
 		if stdinIsTerminal() {
-			return "", nil, errors.New("missing input file; pass a JSON file or pipe JSON on stdin")
+			return "", nil, errNoFile
 		}
 		data, err := io.ReadAll(os.Stdin)
 		return "stdin", data, err
@@ -72,7 +86,7 @@ func readInput(args []string) (string, []byte, error) {
 		data, err := os.ReadFile(args[0])
 		return args[0], data, err
 	default:
-		return "", nil, errors.New("too many arguments")
+		return "", nil, errTooManyArgs
 	}
 }
 
@@ -84,7 +98,25 @@ func stdinIsTerminal() bool {
 	return info.Mode()&os.ModeCharDevice != 0
 }
 
-func printUsage(out io.Writer) {
-	fmt.Fprintln(out, "Usage: a555less [FILE|-]")
-	fmt.Fprintln(out, "Read JSON from FILE, or stdin when FILE is '-' or omitted.")
+func printUsage() {
+	bannerStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), true).
+		BorderForeground(tui.ColorViolet).
+		Foreground(tui.ColorPink).
+		Padding(3, 3, 1, 3).
+		Margin(1, 3, 0, 3)
+	progStyle := lipgloss.NewStyle().Foreground(tui.ColorPurple).Bold(true)
+	argsStyle := lipgloss.NewStyle().Foreground(tui.ColorPink).Underline(true)
+
+	prog := filepath.Base(os.Args[0])
+	usage := fmt.Sprintf("%s\n\n%s %s\n%s",
+		bannerStyle.Render(banner),
+		progStyle.Render(prog),
+		argsStyle.Render("[FILE]"),
+		`
+    -h, --help     Show this help
+        --version  Show version
+`,
+	)
+	fmt.Println(lipgloss.NewStyle().Margin(0, 1).Render(usage))
 }

@@ -79,10 +79,9 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 	if m.width > 0 {
 		leftWidth := lipgloss.Width(path)
 		rightWidth := lipgloss.Width(right)
-		lrWidth := leftWidth + rightWidth
 		switch {
-		case lrWidth+1 <= m.width:
-			text = path + strings.Repeat(" ", m.width-lrWidth) + right
+		case leftWidth+rightWidth+1 <= m.width:
+			text = path + strings.Repeat(" ", m.width-leftWidth-rightWidth) + right
 		default:
 			text = ansi.Truncate(path+" "+right, m.width, "…")
 		}
@@ -139,17 +138,20 @@ func renderIndicator(n *jsondoc.Node, focused bool) string {
 	if focused {
 		return indicatorStyle.Render(indicator)
 	}
-	return punctStyle.Render(indicator)
+	return dimStyle.Render(indicator)
 }
 
 func renderLabel(n *jsondoc.Node) string {
 	if n == nil || n.Parent == nil {
 		return ""
 	}
+	var label string
 	if n.HasKey {
-		return keyStyle.Render(jsondoc.FormatKey(n.Key)) + punctStyle.Render(": ")
+		label = keyStyle.Render(jsondoc.FormatKey(n.Key))
+	} else {
+		label = indexStyle.Render(fmt.Sprintf("[%d]", n.Index))
 	}
-	return indexStyle.Render(fmt.Sprintf("[%d]", n.Index)) + punctStyle.Render(": ")
+	return label + dimStyle.Render(": ")
 }
 
 func renderValue(n *jsondoc.Node) string {
@@ -157,8 +159,12 @@ func renderValue(n *jsondoc.Node) string {
 		return nullStyle.Render("null")
 	}
 	if n.IsContainer() {
-		return countStyle.Render(fmt.Sprintf("(%d) ", len(n.Children))) +
-			dimStyle.Render(jsondoc.Preview(n, previewMaxItems, previewMaxDepth))
+		return dimStyle.Render(
+			fmt.Sprintf("(%d) %s",
+				len(n.Children),
+				jsondoc.Preview(n, previewMaxItems, previewMaxDepth),
+			),
+		)
 	}
 	return renderPrimitive(n)
 }

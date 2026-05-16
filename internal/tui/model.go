@@ -26,6 +26,7 @@ type Model struct {
 // New returns a skeleton TUI model for doc.
 func New(doc *jsondoc.Document) Model {
 	m := Model{Doc: doc, focusID: -1, help: help.New()}
+	m.help.Styles.FullKey = helpFullKeyStyle
 	m.refreshHelp()
 	m.refreshRows()
 	if doc != nil && doc.Root != nil {
