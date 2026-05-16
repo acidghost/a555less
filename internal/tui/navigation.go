@@ -111,6 +111,47 @@ func (m *Model) focusSibling(delta int) {
 	m.ensureVisible()
 }
 
+func (m *Model) collapseFocusedSiblings(deep bool) {
+	m.setFocusedSiblingsCollapseState(true, deep)
+}
+
+func (m *Model) expandFocusedSiblings(deep bool) {
+	m.setFocusedSiblingsCollapseState(false, deep)
+}
+
+func (m *Model) setFocusedSiblingsCollapseState(collapsed, deep bool) {
+	n := m.focusedNode()
+	if n == nil {
+		return
+	}
+
+	siblings := []*jsondoc.Node{n}
+	if n.Parent != nil {
+		siblings = n.Parent.Children
+	}
+
+	for _, sibling := range siblings {
+		setCollapseState(sibling, collapsed, deep)
+	}
+	m.refreshRows()
+	m.ensureVisible()
+}
+
+func setCollapseState(n *jsondoc.Node, collapsed, deep bool) {
+	if n == nil {
+		return
+	}
+	if n.IsContainer() {
+		n.Collapsed = collapsed
+	}
+	if !deep {
+		return
+	}
+	for _, child := range n.Children {
+		setCollapseState(child, collapsed, true)
+	}
+}
+
 // focusedNode returns the node currently identified by m.focusID.
 // If the cached rows are empty, it returns nil. If m.focusID is stale,
 // focusIndex repairs it to the first visible row before returning that node.

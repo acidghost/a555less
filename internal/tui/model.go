@@ -84,6 +84,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focusSibling(1)
 		case key.Matches(msg, keys.PrevSib):
 			m.focusSibling(-1)
+		case key.Matches(msg, keys.Collapse):
+			m.collapseFocusedSiblings(false)
+		case key.Matches(msg, keys.CollapseDeep):
+			m.collapseFocusedSiblings(true)
+		case key.Matches(msg, keys.Expand):
+			m.expandFocusedSiblings(false)
+		case key.Matches(msg, keys.ExpandDeep):
+			m.expandFocusedSiblings(true)
 		}
 	}
 

@@ -127,3 +127,60 @@ func TestTopBottomPageAndSiblings(t *testing.T) {
 		t.Fatalf("previous sibling focus = %q, want %q", got, want)
 	}
 }
+
+func TestCollapseExpandFocusedSiblings(t *testing.T) {
+	m := newTestModel(t)
+	m.move(1) // input.a
+
+	m.collapseFocusedSiblings(false)
+	if !m.Doc.Root.Children[0].Collapsed {
+		t.Fatal("input.a was not collapsed")
+	}
+	if !m.Doc.Root.Children[1].Collapsed {
+		t.Fatal("input.c sibling was not collapsed")
+	}
+	if m.Doc.Root.Collapsed {
+		t.Fatal("root should not be collapsed when focused node has siblings")
+	}
+	if got, want := focusedPath(m), "input.a"; got != want {
+		t.Fatalf("focus after sibling collapse = %q, want %q", got, want)
+	}
+
+	m.expandFocusedSiblings(false)
+	if m.Doc.Root.Children[0].Collapsed || m.Doc.Root.Children[1].Collapsed {
+		t.Fatal("container siblings were not expanded")
+	}
+}
+
+func TestDeepCollapseExpandFocusedSiblings(t *testing.T) {
+	doc, err := jsondoc.Parse([]byte(`{"a":{"b":{"c":1}},"d":[{"e":2}]}`), "nav.json")
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	m := New(doc)
+	m.width = 80
+	m.height = 10
+	m.move(1) // input.a
+
+	m.collapseFocusedSiblings(true)
+	if !doc.Root.Children[0].Collapsed {
+		t.Fatal("input.a was not collapsed")
+	}
+	if !doc.Root.Children[0].Children[0].Collapsed {
+		t.Fatal("nested input.a.b was not collapsed")
+	}
+	if !doc.Root.Children[1].Collapsed {
+		t.Fatal("input.d sibling was not collapsed")
+	}
+	if !doc.Root.Children[1].Children[0].Collapsed {
+		t.Fatal("nested input.d[0] was not collapsed")
+	}
+	if doc.Root.Collapsed {
+		t.Fatal("root should not be collapsed when focused node has siblings")
+	}
+
+	m.expandFocusedSiblings(true)
+	if doc.Root.Children[0].Collapsed || doc.Root.Children[0].Children[0].Collapsed || doc.Root.Children[1].Collapsed || doc.Root.Children[1].Children[0].Collapsed {
+		t.Fatal("containers below root were not deeply expanded")
+	}
+}

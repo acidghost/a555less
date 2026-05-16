@@ -3,22 +3,26 @@ package tui
 import "charm.land/bubbles/v2/key"
 
 type keyMap struct {
-	Quit     key.Binding
-	Down     key.Binding
-	Up       key.Binding
-	Toggle   key.Binding
-	Left     key.Binding
-	Right    key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	PageDown key.Binding
-	PageUp   key.Binding
-	HalfDown key.Binding
-	HalfUp   key.Binding
-	Parent   key.Binding
-	NextSib  key.Binding
-	PrevSib  key.Binding
-	Help     key.Binding
+	Quit         key.Binding
+	Down         key.Binding
+	Up           key.Binding
+	Toggle       key.Binding
+	Left         key.Binding
+	Right        key.Binding
+	Top          key.Binding
+	Bottom       key.Binding
+	PageDown     key.Binding
+	PageUp       key.Binding
+	HalfDown     key.Binding
+	HalfUp       key.Binding
+	Parent       key.Binding
+	NextSib      key.Binding
+	PrevSib      key.Binding
+	Collapse     key.Binding
+	CollapseDeep key.Binding
+	Expand       key.Binding
+	ExpandDeep   key.Binding
+	Help         key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -29,7 +33,8 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right, k.Toggle},
 		{k.Top, k.Bottom, k.PageUp, k.PageDown, k.HalfUp, k.HalfDown},
-		{k.Parent, k.NextSib, k.PrevSib, k.Help, k.Quit},
+		{k.Parent, k.NextSib, k.PrevSib, k.Collapse, k.CollapseDeep},
+		{k.Expand, k.ExpandDeep, k.Help, k.Quit},
 	}
 }
 
@@ -93,6 +98,22 @@ var keys = keyMap{
 	PrevSib: key.NewBinding(
 		key.WithKeys("K"),
 		key.WithHelp("K", "prev sibling"),
+	),
+	Collapse: key.NewBinding(
+		key.WithKeys("c"),
+		key.WithHelp("c", "collapse siblings"),
+	),
+	CollapseDeep: key.NewBinding(
+		key.WithKeys("C", "shift+c"),
+		key.WithHelp("C", "deep collapse siblings"),
+	),
+	Expand: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "expand siblings"),
+	),
+	ExpandDeep: key.NewBinding(
+		key.WithKeys("E", "shift+e"),
+		key.WithHelp("E", "deep expand siblings"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
