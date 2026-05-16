@@ -1,6 +1,12 @@
 package tui
 
-import "charm.land/bubbles/v2/key"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+
+	"charm.land/bubbles/v2/key"
+)
 
 type keyMap struct {
 	Quit         key.Binding
@@ -119,4 +125,64 @@ var keys = keyMap{
 		key.WithKeys("?"),
 		key.WithHelp("?", "toggle help"),
 	),
+}
+
+// KeyBindings returns help text describing all available key bindings.
+func KeyBindings() string {
+	type row struct {
+		keys string
+		desc string
+	}
+
+	keyMapType := reflect.TypeFor[keyMap]()
+	keyMapValue := reflect.ValueOf(keys)
+	bindingType := reflect.TypeFor[key.Binding]()
+
+	rows := make([]row, 0, keyMapType.NumField())
+	maxKeysWidth := len("Keys")
+	for i := 0; i < keyMapType.NumField(); i++ {
+		field := keyMapType.Field(i)
+		if field.Type != bindingType {
+			continue
+		}
+
+		binding, ok := keyMapValue.Field(i).Interface().(key.Binding)
+		if !ok || !binding.Enabled() {
+			continue
+		}
+
+		help := binding.Help()
+		if help.Desc == "" {
+			continue
+		}
+
+		keys := formatKeys(binding.Keys())
+		maxKeysWidth = max(maxKeysWidth, len(keys))
+		rows = append(rows, row{keys: keys, desc: help.Desc})
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, "%-*s  %s\n", maxKeysWidth, "Keys", "Action")
+	fmt.Fprintf(&out, "%-*s  %s\n", maxKeysWidth, strings.Repeat("-", maxKeysWidth), strings.Repeat("-", len("Action")))
+	for _, row := range rows {
+		fmt.Fprintf(&out, "%-*s  %s\n", maxKeysWidth, row.keys, row.desc)
+	}
+
+	return strings.TrimRight(out.String(), "\n")
+}
+
+func formatKeys(keys []string) string {
+	seen := make(map[string]struct{}, len(keys))
+	formatted := make([]string, 0, len(keys))
+	for _, keyName := range keys {
+		if keyName == " " {
+			keyName = "space"
+		}
+		if _, ok := seen[keyName]; ok {
+			continue
+		}
+		seen[keyName] = struct{}{}
+		formatted = append(formatted, keyName)
+	}
+	return strings.Join(formatted, ", ")
 }

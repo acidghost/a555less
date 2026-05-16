@@ -42,6 +42,9 @@ func run(args []string) error {
 		case "-h", "--help":
 			printUsage()
 			return nil
+		case "--keys":
+			fmt.Println(tui.KeyBindings())
+			return nil
 		case "--version":
 			fmt.Printf("Version: %s\nCommit:  %s\nDate:    %s\n", buildVersion, buildCommit, buildDate)
 			return nil
