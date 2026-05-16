@@ -8,7 +8,7 @@ func (m *Model) move(delta int) {
 	if len(m.rows) == 0 {
 		return
 	}
-	i := m.focusIndex(m.rows)
+	i := m.focusedIndex()
 	i = clamp(i+delta, len(m.rows)-1)
 	m.focusID = m.rows[i].Node.ID
 	m.ensureVisible()
@@ -111,29 +111,36 @@ func (m *Model) focusSibling(delta int) {
 	m.ensureVisible()
 }
 
-// focusedNode  TODO docs
+// focusedNode returns the node currently identified by m.focusID.
+// If the cached rows are empty, it returns nil. If m.focusID is stale,
+// focusIndex repairs it to the first visible row before returning that node.
 func (m *Model) focusedNode() *jsondoc.Node {
 	if len(m.rows) == 0 {
 		return nil
 	}
-	i := m.focusIndex(m.rows)
+	i := m.focusedIndex()
 	return m.rows[i].Node
 }
 
-// focusIndex TODO docs
-func (m *Model) focusIndex(rows []jsondoc.Row) int {
-	if len(rows) == 0 {
+// focusedIndex returns the index of m.focusID within rows.
+// If rows is empty, it returns -1. If m.focusID is not present, it resets
+// focus to the first row and returns 0.
+func (m *Model) focusedIndex() int {
+	if len(m.rows) == 0 {
 		return -1
 	}
-	i := indexOfNodeID(rows, m.focusID)
+	i := indexOfNodeID(m.rows, m.focusID)
 	if i < 0 {
-		m.focusID = rows[0].Node.ID
+		m.focusID = m.rows[0].Node.ID
 		return 0
 	}
 	return i
 }
 
-// ensureVisible TODO docs
+// ensureVisible adjusts m.top so the focused row is visible in the viewer.
+// It keeps up to defaultScrolloff rows of context around the focus when
+// possible, clamps m.top to the valid scroll range, and resets focus/scroll
+// state when there are no visible rows.
 func (m *Model) ensureVisible() {
 	if len(m.rows) == 0 {
 		m.focusID = -1
@@ -143,7 +150,7 @@ func (m *Model) ensureVisible() {
 
 	viewerHeight := m.viewerHeight()
 	maxTop := max(0, len(m.rows)-viewerHeight)
-	focusIdx := m.focusIndex(m.rows)
+	focusIdx := m.focusedIndex()
 
 	m.top = clamp(m.top, maxTop)
 	so := min(defaultScrolloff, max(0, (viewerHeight-1)/2))
