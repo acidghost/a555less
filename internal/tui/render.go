@@ -15,6 +15,52 @@ const (
 	previewMaxDepth = 1
 )
 
+func (m Model) render() string {
+	if m.Doc == nil || m.Doc.Root == nil {
+		return m.renderEmpty()
+	}
+
+	focusIdx := indexOfNodeID(m.rows, m.focusID)
+	if focusIdx < 0 && len(m.rows) > 0 {
+		focusIdx = 0
+	}
+
+	focusedNode := m.Doc.Root
+	if focusIdx >= 0 && focusIdx < len(m.rows) {
+		focusedNode = m.rows[focusIdx].Node
+	}
+
+	status := m.renderStatus(jsondoc.Path(focusedNode), focusIdx)
+	footer := m.renderFooter(status)
+
+	viewerHeight := m.viewerHeight()
+
+	start := clamp(m.top, max(0, len(m.rows)-viewerHeight))
+	lines := make([]string, 0, viewerHeight+1)
+	for i := range viewerHeight {
+		rowIdx := start + i
+		if rowIdx < len(m.rows) {
+			row := m.rows[rowIdx]
+			lines = append(lines, m.renderRow(row, row.Node.ID == m.focusID))
+		} else {
+			lines = append(lines, m.fillerRow())
+		}
+	}
+
+	return strings.Join(lines, "\n") + "\n" + footer
+}
+
+func (m Model) renderEmpty() string {
+	status := m.renderStatus("No JSON document loaded.", 0)
+	footer := m.renderFooter(status)
+	h := m.viewerHeight()
+	lines := make([]string, 0, h+2)
+	for range h {
+		lines = append(lines, m.fillerRow())
+	}
+	return strings.Join(lines, "\n") + "\n" + footer
+}
+
 func (m Model) renderStatus(path string, focusIndex int) string {
 	filename := m.Doc.Filename
 	totalRows := len(m.rows)
@@ -46,19 +92,29 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 	return statusStyle.Render(text)
 }
 
-func fillerRow(width int) string {
+func (m Model) renderFooter(status string) string {
+	if m.helpView == "" {
+		return status
+	}
+	return status + "\n" + m.helpView
+}
+
+func (m Model) fillerRow() string {
 	line := dimStyle.Render("~")
-	if width > 0 {
-		line = ansi.Truncate(line, width, "…")
+	if m.width > 0 {
+		line = ansi.Truncate(line, m.width, "…")
 	}
 	return line
 }
 
-func renderRow(row jsondoc.Row, focused bool, width int) string {
+func (m Model) renderRow(row jsondoc.Row, focused bool) string {
 	n := row.Node
-	line := strings.Repeat("  ", row.Depth) + renderIndicator(n, focused) + renderLabel(n) + renderValue(n)
-	if width > 0 {
-		line = ansi.Truncate(line, width, "…")
+	line := strings.Repeat("  ", row.Depth) +
+		renderIndicator(n, focused) +
+		renderLabel(n) +
+		renderValue(n)
+	if m.width > 0 {
+		line = ansi.Truncate(line, m.width, "…")
 	}
 	return line
 }
@@ -148,9 +204,9 @@ func renderPreview(n *jsondoc.Node, maxItems int, maxDepth int) string {
 	}
 }
 
-func renderContainerPreview(n *jsondoc.Node, maxItems int, maxDepth int, open string, closeDelim string) string {
+func renderContainerPreview(n *jsondoc.Node, maxItems, maxDepth int, openD, closeD string) string {
 	if len(n.Children) == 0 {
-		return punctStyle.Render(open + closeDelim)
+		return punctStyle.Render(openD + closeD)
 	}
 	if maxItems < 0 {
 		maxItems = 0
@@ -171,5 +227,7 @@ func renderContainerPreview(n *jsondoc.Node, maxItems int, maxDepth int, open st
 		parts = append(parts, punctStyle.Render("…"))
 	}
 
-	return punctStyle.Render(open) + strings.Join(parts, punctStyle.Render(", ")) + punctStyle.Render(closeDelim)
+	return punctStyle.Render(openD) +
+		strings.Join(parts, punctStyle.Render(", ")) +
+		punctStyle.Render(closeD)
 }
