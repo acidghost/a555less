@@ -2,7 +2,10 @@
 
 # a555less
 
-A small Go terminal JSON viewer inspired by the data-mode subset of `jless`.
+[![CI](https://github.com/acidghost/a555less/actions/workflows/ci.yaml/badge.svg)](https://github.com/acidghost/a555less/actions/workflows/ci.yaml)
+[![Nightly](https://github.com/acidghost/a555less/actions/workflows/nightly.yaml/badge.svg)](https://github.com/acidghost/a555less/actions/workflows/nightly.yaml)
+
+A small Go terminal JSON viewer inspired by the data-mode subset of [`jless`](https://github.com/PaulJuliusMartinez/jless).
 
 ## Install
 
