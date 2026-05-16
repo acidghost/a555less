@@ -8,31 +8,70 @@ import (
 	"io"
 )
 
+// ErrTrailingToken reports that a JSON input contains more than one top-level
+// value. Callers may use this to retry parsing as JSON Lines.
+var ErrTrailingToken = errors.New("unexpected trailing token")
+
 // Parse parses data as a single strict JSON value and returns an ordered AST.
 func Parse(data []byte, filename string) (*Document, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-
 	doc := &Document{
 		Filename: filename,
 		Data:     append([]byte(nil), data...),
 	}
 
-	root, err := doc.parseValue(dec, nil, "", false, 0)
+	root, err := doc.parseSingleValue(data, nil, "", false, 0)
+	if err != nil {
+		return nil, err
+	}
+	doc.Root = root
+
+	return doc, nil
+}
+
+// ParseJSONL parses data as JSON Lines and returns an ordered AST whose root is
+// an array containing one child per non-empty line.
+func ParseJSONL(data []byte, filename string) (*Document, error) {
+	doc := &Document{
+		Filename: filename,
+		Data:     append([]byte(nil), data...),
+		JSONL:    true,
+	}
+	doc.Root = doc.newNode(KindArray, nil, "", false, 0)
+
+	for lineIndex, line := range bytes.Split(data, []byte{'\n'}) {
+		line = bytes.TrimSpace(bytes.TrimSuffix(line, []byte{'\r'}))
+		if len(line) == 0 {
+			continue
+		}
+
+		child, err := doc.parseSingleValue(line, doc.Root, "", false, len(doc.Root.Children))
+		if err != nil {
+			return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
+		}
+		doc.Root.Children = append(doc.Root.Children, child)
+	}
+
+	return doc, nil
+}
+
+func (d *Document) parseSingleValue(data []byte, parent *Node, key string, hasKey bool, index int) (*Node, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
+	root, err := d.parseValue(dec, parent, key, hasKey, index)
 	if err != nil {
 		return nil, invalidJSONError(data, err)
 	}
-	doc.Root = root
 
 	// Ensure no trailing non-whitespace tokens.
 	if tok, err := dec.Token(); err != io.EOF {
 		if err == nil {
-			return nil, fmt.Errorf("invalid JSON: unexpected trailing token %v", tok)
+			return nil, fmt.Errorf("invalid JSON: %w %v", ErrTrailingToken, tok)
 		}
 		return nil, invalidJSONError(data, err)
 	}
 
-	return doc, nil
+	return root, nil
 }
 
 func (d *Document) parseValue(dec *json.Decoder, parent *Node, key string, hasKey bool, index int) (*Node, error) {

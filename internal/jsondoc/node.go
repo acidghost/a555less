@@ -46,6 +46,7 @@ type Document struct {
 	Root     *Node
 	Filename string
 	Data     []byte
+	JSONL    bool
 	nextID   int
 }
 

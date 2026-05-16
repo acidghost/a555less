@@ -29,8 +29,8 @@ func New(doc *jsondoc.Document) Model {
 	m.help.Styles.FullKey = helpFullKeyStyle
 	m.refreshHelp()
 	m.refreshRows()
-	if doc != nil && doc.Root != nil {
-		m.focusID = doc.Root.ID
+	if len(m.rows) > 0 {
+		m.focusID = m.rows[0].Node.ID
 	}
 	return m
 }
@@ -121,5 +121,5 @@ func (m *Model) refreshRows() {
 		m.rows = nil
 		return
 	}
-	m.rows = jsondoc.VisibleRows(m.Doc.Root)
+	m.rows = jsondoc.VisibleRowsForDocument(m.Doc)
 }

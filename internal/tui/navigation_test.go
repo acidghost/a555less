@@ -128,6 +128,50 @@ func TestTopBottomPageAndSiblings(t *testing.T) {
 	}
 }
 
+func TestJSONLStartsFocusedOnFirstItemAndHidesRoot(t *testing.T) {
+	doc, err := jsondoc.ParseJSONL([]byte("{\"a\":1}\n{\"b\":2}\n"), "events.jsonl")
+	if err != nil {
+		t.Fatalf("ParseJSONL() error = %v", err)
+	}
+	m := New(doc)
+	m.width = 80
+	m.height = 10
+
+	if got, want := focusedPath(m), "input[0]"; got != want {
+		t.Fatalf("initial focus = %q, want %q", got, want)
+	}
+	if len(m.rows) != 4 {
+		t.Fatalf("rows len = %d, want 4", len(m.rows))
+	}
+	if m.rows[0].Node != doc.Root.Children[0] || m.rows[0].Depth != 0 {
+		t.Fatalf("first row = node:%v depth:%d, want first JSONL item at depth 0", m.rows[0].Node, m.rows[0].Depth)
+	}
+}
+
+func TestJSONLParentNavigationDoesNotFocusHiddenRoot(t *testing.T) {
+	doc, err := jsondoc.ParseJSONL([]byte("{\"a\":1}\n{\"b\":2}\n"), "events.jsonl")
+	if err != nil {
+		t.Fatalf("ParseJSONL() error = %v", err)
+	}
+	m := New(doc)
+	m.width = 80
+	m.height = 10
+
+	m.focusParent()
+	if got, want := focusedPath(m), "input[0]"; got != want {
+		t.Fatalf("parent from top-level JSONL item = %q, want %q", got, want)
+	}
+
+	m.right()
+	if got, want := focusedPath(m), "input[0].a"; got != want {
+		t.Fatalf("right into first JSONL item = %q, want %q", got, want)
+	}
+	m.focusParent()
+	if got, want := focusedPath(m), "input[0]"; got != want {
+		t.Fatalf("parent from nested JSONL item = %q, want %q", got, want)
+	}
+}
+
 func TestCollapseExpandFocusedSiblings(t *testing.T) {
 	m := newTestModel(t)
 	m.move(1) // input.a

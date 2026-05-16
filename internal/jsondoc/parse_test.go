@@ -109,6 +109,72 @@ func TestParseRejectsTrailingValue(t *testing.T) {
 	}
 }
 
+func TestParseJSONLWrapsValuesInRootArray(t *testing.T) {
+	doc, err := ParseJSONL([]byte("{\"a\":1}\n[2,3]\ntrue\n"), "events.jsonl")
+	if err != nil {
+		t.Fatalf("ParseJSONL() error = %v", err)
+	}
+
+	if !doc.JSONL {
+		t.Fatal("doc.JSONL = false, want true")
+	}
+	if doc.Root.Kind != KindArray {
+		t.Fatalf("root kind = %v, want array", doc.Root.Kind)
+	}
+	if len(doc.Root.Children) != 3 {
+		t.Fatalf("children len = %d, want 3", len(doc.Root.Children))
+	}
+	if doc.Root.Children[0].Kind != KindObject || doc.Root.Children[1].Kind != KindArray || doc.Root.Children[2].Kind != KindBool {
+		t.Fatalf("child kinds = %v, %v, %v; want object, array, bool", doc.Root.Children[0].Kind, doc.Root.Children[1].Kind, doc.Root.Children[2].Kind)
+	}
+	for i, child := range doc.Root.Children {
+		if child.Parent != doc.Root || child.Index != i {
+			t.Fatalf("child %d metadata = parent:%v index:%d, want root/%d", i, child.Parent, child.Index, i)
+		}
+	}
+}
+
+func TestVisibleRowsForDocumentHidesJSONLRoot(t *testing.T) {
+	doc, err := ParseJSONL([]byte("{\"a\":1}\n[2]\n"), "events.jsonl")
+	if err != nil {
+		t.Fatalf("ParseJSONL() error = %v", err)
+	}
+
+	rows := VisibleRowsForDocument(doc)
+	if len(rows) != 4 {
+		t.Fatalf("rows len = %d, want 4", len(rows))
+	}
+	if rows[0].Node != doc.Root.Children[0] || rows[0].Depth != 0 {
+		t.Fatalf("first row = node:%v depth:%d, want first child at depth 0", rows[0].Node, rows[0].Depth)
+	}
+	if rows[1].Node != doc.Root.Children[0].Children[0] || rows[1].Depth != 1 {
+		t.Fatalf("second row = node:%v depth:%d, want nested child at depth 1", rows[1].Node, rows[1].Depth)
+	}
+	if rows[2].Node != doc.Root.Children[1] || rows[2].Depth != 0 {
+		t.Fatalf("third row = node:%v depth:%d, want second child at depth 0", rows[2].Node, rows[2].Depth)
+	}
+}
+
+func TestParseJSONLSkipsBlankLines(t *testing.T) {
+	doc, err := ParseJSONL([]byte("\n  \n{\"a\":1}\n"), "events.jsonl")
+	if err != nil {
+		t.Fatalf("ParseJSONL() error = %v", err)
+	}
+	if len(doc.Root.Children) != 1 {
+		t.Fatalf("children len = %d, want 1", len(doc.Root.Children))
+	}
+}
+
+func TestParseJSONLErrorIncludesLine(t *testing.T) {
+	_, err := ParseJSONL([]byte("{\"ok\":true}\n{bad}\n"), "events.jsonl")
+	if err == nil {
+		t.Fatal("ParseJSONL() error = nil, want syntax error")
+	}
+	if !strings.Contains(err.Error(), "line 2:") {
+		t.Fatalf("ParseJSONL() error = %q, want line 2", err.Error())
+	}
+}
+
 func TestParseSyntaxErrorIncludesLineAndColumn(t *testing.T) {
 	_, err := Parse([]byte("{\n  \"a\": \n}"), "invalid.json")
 	if err == nil {

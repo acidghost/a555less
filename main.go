@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -25,7 +26,7 @@ var (
 var banner string
 
 var (
-	errNoFile      = errors.New("missing input file; pass a JSON file or pipe JSON on stdin")
+	errNoFile      = errors.New("missing input file; pass a JSON/JSONL file or pipe it on stdin")
 	errTooManyArgs = errors.New("too many arguments")
 )
 
@@ -59,7 +60,7 @@ func run(args []string) error {
 		return err
 	}
 
-	doc, err := jsondoc.Parse(data, filename)
+	doc, err := parseInput(data, filename)
 	if err != nil {
 		return fmt.Errorf("parse %s: %w", filename, err)
 	}
@@ -70,6 +71,22 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+func parseInput(data []byte, filename string) (*jsondoc.Document, error) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == ".jsonl" || ext == ".ndjson" {
+		return jsondoc.ParseJSONL(data, filename)
+	}
+
+	doc, err := jsondoc.Parse(data, filename)
+	if err == nil {
+		return doc, nil
+	}
+	if filename == "stdin" && errors.Is(err, jsondoc.ErrTrailingToken) {
+		return jsondoc.ParseJSONL(data, filename)
+	}
+	return nil, err
 }
 
 func readInput(args []string) (string, []byte, error) {

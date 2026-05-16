@@ -1,4 +1,5 @@
 file := 'testdata/basic.json'
+jsonl_file := 'testdata/events.jsonl'
 session := 'a555less-e2e'
 width := '100'
 height := '30'
@@ -12,7 +13,8 @@ run: \
     help-expanded \
     help-simple \
     navigation \
-    smoke
+    smoke \
+    smoke-jsonl
 
 # Test.
 collapse:
@@ -33,3 +35,7 @@ navigation:
 # Test.
 smoke:
     ./test_smoke.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test JSONL rendering.
+smoke-jsonl:
+    ./test_smoke_jsonl.sh "{{jsonl_file}}" "{{session}}" "{{width}}" "{{height}}"

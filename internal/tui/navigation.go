@@ -83,7 +83,7 @@ func (m *Model) bottomRow() {
 
 func (m *Model) focusParent() {
 	n := m.focusedNode()
-	if n == nil || n.Parent == nil {
+	if n == nil || n.Parent == nil || m.isHiddenRoot(n.Parent) {
 		return
 	}
 	m.focusID = n.Parent.ID
@@ -135,6 +135,10 @@ func (m *Model) setFocusedSiblingsCollapseState(collapsed, deep bool) {
 	}
 	m.refreshRows()
 	m.ensureVisible()
+}
+
+func (m *Model) isHiddenRoot(n *jsondoc.Node) bool {
+	return m.Doc != nil && m.Doc.JSONL && n == m.Doc.Root
 }
 
 func setCollapseState(n *jsondoc.Node, collapsed, deep bool) {
