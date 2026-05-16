@@ -1,14 +1,13 @@
 name: Nightly
 
 on:
-  # Disable for the starter template
-  # schedule:
-  #   - cron: "37 6 * * *"
+  schedule:
+    - cron: "37 6 * * *"
   workflow_dispatch:
 
 env:
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION: 2026.5.1
+  MISE_VERSION: 2026.5.9
 
 permissions:
   contents: read
