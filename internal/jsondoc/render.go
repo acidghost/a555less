@@ -1,6 +1,9 @@
 package jsondoc
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 // IsIdentifier reports whether s can be rendered as an unquoted JavaScript-like
 // identifier in object labels and paths.
@@ -97,27 +100,25 @@ func previewContainer(n *Node, maxItems int, maxDepth int, open string, closeDel
 		maxItems = 0
 	}
 
-	out := open
-	limit := len(n.Children)
-	if limit > maxItems {
-		limit = maxItems
-	}
+	var out strings.Builder
+	out.WriteString(open)
+	limit := min(len(n.Children), maxItems)
 	for i := range limit {
 		if i > 0 {
-			out += ", "
+			out.WriteString(", ")
 		}
 		child := n.Children[i]
 		if n.Kind == KindObject {
-			out += FormatKey(child.Key) + ": "
+			out.WriteString(FormatKey(child.Key) + ": ")
 		}
-		out += Preview(child, maxItems, maxDepth-1)
+		out.WriteString(Preview(child, maxItems, maxDepth-1))
 	}
 	if limit < len(n.Children) {
 		if limit > 0 {
-			out += ", "
+			out.WriteString(", ")
 		}
-		out += "…"
+		out.WriteString("…")
 	}
-	out += closeDelim
-	return out
+	out.WriteString(closeDelim)
+	return out.String()
 }
