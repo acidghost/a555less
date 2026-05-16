@@ -18,6 +18,19 @@ type keyMap struct {
 	Parent   key.Binding
 	NextSib  key.Binding
 	PrevSib  key.Binding
+	Help     key.Binding
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Up, k.Down, k.Toggle, k.Help, k.Quit}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Left, k.Right, k.Toggle},
+		{k.Top, k.Bottom, k.PageUp, k.PageDown, k.HalfUp, k.HalfDown},
+		{k.Parent, k.NextSib, k.PrevSib, k.Help, k.Quit},
+	}
 }
 
 var keys = keyMap{
@@ -80,5 +93,9 @@ var keys = keyMap{
 	PrevSib: key.NewBinding(
 		key.WithKeys("K"),
 		key.WithHelp("K", "prev sibling"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
 	),
 }

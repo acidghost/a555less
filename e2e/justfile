@@ -9,12 +9,22 @@ _help:
 # Run e2e test suite.
 run: \
     collapse \
+    help-expanded \
+    help-simple \
     navigation \
     smoke
 
 # Test.
 collapse:
     ./test_collapse.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test expanded help.
+help-expanded:
+    ./test_help_expanded.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test simple help.
+help-simple:
+    ./test_help_simple.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
 
 # Test.
 navigation:

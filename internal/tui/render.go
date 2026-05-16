@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/acidghost/a555less/internal/jsondoc"
@@ -14,7 +15,9 @@ const (
 	previewMaxDepth = 1
 )
 
-func renderStatus(path string, filename string, focusIndex int, totalRows int, width int) string {
+func (m Model) renderStatus(path string, focusIndex int) string {
+	filename := m.Doc.Filename
+	totalRows := len(m.rows)
 	if filename == "" {
 		filename = "stdin"
 	}
@@ -27,13 +30,15 @@ func renderStatus(path string, filename string, focusIndex int, totalRows int, w
 
 	right := fmt.Sprintf("%s  %d/%d", filename, focusIndex+1, totalRows)
 	var text string
-	if width > 0 {
-		leftWidth := ansi.StringWidth(path)
-		rightWidth := ansi.StringWidth(right)
-		if leftWidth+1+rightWidth <= width {
-			text = path + strings.Repeat(" ", width-leftWidth-rightWidth) + right
-		} else {
-			text = ansi.Truncate(path+" "+right, width, "…")
+	if m.width > 0 {
+		leftWidth := lipgloss.Width(path)
+		rightWidth := lipgloss.Width(right)
+		lrWidth := leftWidth + rightWidth
+		switch {
+		case lrWidth+1 <= m.width:
+			text = path + strings.Repeat(" ", m.width-lrWidth) + right
+		default:
+			text = ansi.Truncate(path+" "+right, m.width, "…")
 		}
 	} else {
 		text = path + " " + right

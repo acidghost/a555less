@@ -5,29 +5,22 @@ import "github.com/acidghost/a555less/internal/jsondoc"
 const defaultScrolloff = 2
 
 func (m *Model) move(delta int) {
-	rows := m.visibleRows()
-	if len(rows) == 0 {
+	if len(m.rows) == 0 {
 		return
 	}
-	i := m.focusIndex(rows)
-	i = clamp(i+delta, len(rows)-1)
-	m.focusID = rows[i].Node.ID
-	m.ensureVisibleRows(rows)
+	i := m.focusIndex(m.rows)
+	i = clamp(i+delta, len(m.rows)-1)
+	m.focusID = m.rows[i].Node.ID
+	m.ensureVisible()
 }
 
 func (m *Model) page(delta int) {
-	step := m.viewerHeight()
-	if step < 1 {
-		step = 1
-	}
+	step := max(m.viewerHeight(), 1)
 	m.move(delta * step)
 }
 
 func (m *Model) halfPage(delta int) {
-	step := m.viewerHeight() / 2
-	if step < 1 {
-		step = 1
-	}
+	step := max(m.viewerHeight()/2, 1)
 	m.move(delta * step)
 }
 
@@ -37,6 +30,7 @@ func (m *Model) toggle() {
 		return
 	}
 	n.Collapsed = !n.Collapsed
+	m.refreshRows()
 	m.ensureVisible()
 }
 
@@ -47,6 +41,7 @@ func (m *Model) left() {
 	}
 	if n.IsContainer() && !n.Collapsed {
 		n.Collapsed = true
+		m.refreshRows()
 		m.ensureVisible()
 		return
 	}
@@ -60,6 +55,7 @@ func (m *Model) right() {
 	}
 	if n.Collapsed {
 		n.Collapsed = false
+		m.refreshRows()
 		m.ensureVisible()
 		return
 	}
@@ -70,21 +66,19 @@ func (m *Model) right() {
 }
 
 func (m *Model) topRow() {
-	rows := m.visibleRows()
-	if len(rows) == 0 {
+	if len(m.rows) == 0 {
 		return
 	}
-	m.focusID = rows[0].Node.ID
-	m.ensureVisibleRows(rows)
+	m.focusID = m.rows[0].Node.ID
+	m.ensureVisible()
 }
 
 func (m *Model) bottomRow() {
-	rows := m.visibleRows()
-	if len(rows) == 0 {
+	if len(m.rows) == 0 {
 		return
 	}
-	m.focusID = rows[len(rows)-1].Node.ID
-	m.ensureVisibleRows(rows)
+	m.focusID = m.rows[len(m.rows)-1].Node.ID
+	m.ensureVisible()
 }
 
 func (m *Model) focusParent() {
@@ -117,22 +111,16 @@ func (m *Model) focusSibling(delta int) {
 	m.ensureVisible()
 }
 
-func (m *Model) visibleRows() []jsondoc.Row {
-	if m.Doc == nil || m.Doc.Root == nil {
-		return nil
-	}
-	return jsondoc.VisibleRows(m.Doc.Root)
-}
-
+// focusedNode  TODO docs
 func (m *Model) focusedNode() *jsondoc.Node {
-	rows := m.visibleRows()
-	if len(rows) == 0 {
+	if len(m.rows) == 0 {
 		return nil
 	}
-	i := m.focusIndex(rows)
-	return rows[i].Node
+	i := m.focusIndex(m.rows)
+	return m.rows[i].Node
 }
 
+// focusIndex TODO docs
 func (m *Model) focusIndex(rows []jsondoc.Row) int {
 	if len(rows) == 0 {
 		return -1
@@ -145,20 +133,17 @@ func (m *Model) focusIndex(rows []jsondoc.Row) int {
 	return i
 }
 
+// ensureVisible TODO docs
 func (m *Model) ensureVisible() {
-	m.ensureVisibleRows(m.visibleRows())
-}
-
-func (m *Model) ensureVisibleRows(rows []jsondoc.Row) {
-	if len(rows) == 0 {
+	if len(m.rows) == 0 {
 		m.focusID = -1
 		m.top = 0
 		return
 	}
 
 	viewerHeight := m.viewerHeight()
-	maxTop := max(0, len(rows)-viewerHeight)
-	focusIdx := m.focusIndex(rows)
+	maxTop := max(0, len(m.rows)-viewerHeight)
+	focusIdx := m.focusIndex(m.rows)
 
 	m.top = clamp(m.top, maxTop)
 	so := min(defaultScrolloff, max(0, (viewerHeight-1)/2))
@@ -174,7 +159,8 @@ func (m *Model) ensureVisibleRows(rows []jsondoc.Row) {
 
 func (m Model) viewerHeight() int {
 	if m.height <= 0 {
-		return max(1, len(m.visibleRows()))
+		return max(1, len(m.rows))
 	}
-	return max(1, m.height-1)
+	footerHeight := 1 + m.helpHeight // status line + cached help view height.
+	return max(1, m.height-footerHeight)
 }

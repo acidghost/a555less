@@ -14,7 +14,7 @@ func newTestModel(t *testing.T) Model {
 	}
 	m := New(doc)
 	m.width = 80
-	m.height = 6 // 5 viewer rows + status.
+	m.height = 7 // 5 viewer rows + status + help.
 	m.ensureVisible()
 	return m
 }
