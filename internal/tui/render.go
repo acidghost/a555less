@@ -75,6 +75,9 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 	}
 
 	right := fmt.Sprintf("%s  %d/%d", filename, focusIndex+1, totalRows)
+	if matchIndex, matchTotal, ok := m.search.matchPosition(); ok {
+		right = fmt.Sprintf("[%d/%d]  %s", matchIndex, matchTotal, right)
+	}
 	var text string
 	if m.width > 0 {
 		leftWidth := lipgloss.Width(path)
@@ -92,6 +95,13 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 }
 
 func (m Model) renderFooter(status string) string {
+	if m.search.editing() {
+		prompt := searchPromptStyle.Render("/") + m.search.input() + searchPromptStyle.Render("█")
+		if m.width > 0 {
+			prompt = ansi.Truncate(prompt, m.width, "…")
+		}
+		return status + "\n" + prompt
+	}
 	if m.helpView == "" {
 		return status
 	}
@@ -110,8 +120,8 @@ func (m Model) renderRow(row jsondoc.Row, focused bool) string {
 	n := row.Node
 	line := strings.Repeat("  ", row.Depth) +
 		renderIndicator(n, focused) +
-		renderLabel(n) +
-		renderValue(n)
+		m.renderLabel(n) +
+		m.renderValue(n)
 	if m.width > 0 {
 		line = ansi.Truncate(line, m.width, "…")
 	}
@@ -141,20 +151,20 @@ func renderIndicator(n *jsondoc.Node, focused bool) string {
 	return dimStyle.Render(indicator)
 }
 
-func renderLabel(n *jsondoc.Node) string {
+func (m Model) renderLabel(n *jsondoc.Node) string {
 	if n == nil || n.Parent == nil {
 		return ""
 	}
 	var label string
 	if n.HasKey {
-		label = keyStyle.Render(jsondoc.FormatKey(n.Key))
+		label = m.renderSearchText(jsondoc.FormatKey(n.Key), keyStyle, n, searchPartKey)
 	} else {
 		label = indexStyle.Render(fmt.Sprintf("[%d]", n.Index))
 	}
 	return label + dimStyle.Render(": ")
 }
 
-func renderValue(n *jsondoc.Node) string {
+func (m Model) renderValue(n *jsondoc.Node) string {
 	if n == nil {
 		return nullStyle.Render("null")
 	}
@@ -166,21 +176,21 @@ func renderValue(n *jsondoc.Node) string {
 			),
 		)
 	}
-	return renderPrimitive(n)
+	return m.renderPrimitive(n)
 }
 
-func renderPrimitive(n *jsondoc.Node) string {
+func (m Model) renderPrimitive(n *jsondoc.Node) string {
 	text := jsondoc.FormatPrimitive(n)
+	style := lipgloss.NewStyle()
 	switch n.Kind {
 	case jsondoc.KindNull:
-		return nullStyle.Render(text)
+		style = nullStyle
 	case jsondoc.KindBool:
-		return boolStyle.Render(text)
+		style = boolStyle
 	case jsondoc.KindNumber:
-		return numberStyle.Render(text)
+		style = numberStyle
 	case jsondoc.KindString:
-		return stringStyle.Render(text)
-	default:
-		return text
+		style = stringStyle
 	}
+	return m.renderSearchText(text, style, n, searchPartValue)
 }

@@ -28,11 +28,14 @@ type keyMap struct {
 	CollapseDeep key.Binding
 	Expand       key.Binding
 	ExpandDeep   key.Binding
+	Search       key.Binding
+	NextMatch    key.Binding
+	PrevMatch    key.Binding
 	Help         key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Toggle, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Toggle, k.Search, k.Help, k.Quit}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -40,7 +43,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Left, k.Right, k.Toggle},
 		{k.Top, k.Bottom, k.PageUp, k.PageDown, k.HalfUp, k.HalfDown},
 		{k.Parent, k.NextSib, k.PrevSib, k.Collapse, k.CollapseDeep},
-		{k.Expand, k.ExpandDeep, k.Help, k.Quit},
+		{k.Expand, k.ExpandDeep, k.Search, k.NextMatch, k.PrevMatch, k.Help, k.Quit},
 	}
 }
 
@@ -120,6 +123,18 @@ var keys = keyMap{
 	ExpandDeep: key.NewBinding(
 		key.WithKeys("E", "shift+e"),
 		key.WithHelp("E", "deep expand siblings"),
+	),
+	Search: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	NextMatch: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "next match"),
+	),
+	PrevMatch: key.NewBinding(
+		key.WithKeys("p", "N"),
+		key.WithHelp("p/N", "previous match"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),

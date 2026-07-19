@@ -21,6 +21,7 @@ type Model struct {
 	help       help.Model
 	helpView   string
 	helpHeight int
+	search     searchState
 }
 
 // New returns a skeleton TUI model for doc.
@@ -50,7 +51,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshHelp()
 		m.ensureVisible()
 	case tea.KeyPressMsg:
+		if m.search.editing() {
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+			m.updateSearch(msg)
+			return m, nil
+		}
+
+		previousFocusID := m.focusID
+		searchJump := false
 		switch {
+		case key.Matches(msg, keys.NextMatch):
+			searchJump = true
+			m.moveSearch(1)
+		case key.Matches(msg, keys.PrevMatch):
+			searchJump = true
+			m.moveSearch(-1)
+		case key.Matches(msg, keys.Search):
+			m.startSearch()
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, keys.Help):
@@ -93,6 +112,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.expandFocusedSiblings(false)
 		case key.Matches(msg, keys.ExpandDeep):
 			m.expandFocusedSiblings(true)
+		}
+		if !searchJump && m.focusID != previousFocusID {
+			m.search.markCursorMoved()
+		}
+	case tea.PasteMsg:
+		if m.search.editing() {
+			m.search.appendInput(msg.Content)
 		}
 	}
 

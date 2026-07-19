@@ -52,6 +52,10 @@ capture() {
     tmux capture-pane -p -t "$E2E_TARGET"
 }
 
+capture_ansi() {
+    tmux capture-pane -p -e -t "$E2E_TARGET"
+}
+
 send_keys() {
     tmux send-keys -t "$E2E_TARGET" "$@"
 }

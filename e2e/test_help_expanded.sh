@@ -26,8 +26,11 @@ assert_contains "$pane" "C-d  half down"
 assert_contains "$pane" "H parent"
 assert_contains "$pane" "J next sibling"
 assert_contains "$pane" "K prev sibling"
-assert_contains "$pane" "? toggle help"
-assert_contains "$pane" "q quit"
+assert_contains "$pane" "/   search"
+assert_contains "$pane" "n   next match"
+assert_contains "$pane" "p/N previous match"
+assert_contains "$pane" "?   toggle help"
+assert_contains "$pane" "q   quit"
 
 printf '%s\n' "$pane"
 quit_app
