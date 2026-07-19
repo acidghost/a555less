@@ -56,8 +56,13 @@ c                         collapse siblings
 C, shift+c                deep collapse siblings
 e                         expand siblings
 E, shift+e                deep expand siblings
+/                         search
+n                         next match
+p                         previous match
 ?                         toggle help
 ```
+
+Searches are case-insensitive by default. Append `/s` to the search text to make a search case-sensitive.
 
 ## Contributing
 

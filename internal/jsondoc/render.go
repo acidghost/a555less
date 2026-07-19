@@ -109,7 +109,8 @@ func previewContainer(n *Node, maxItems int, maxDepth int, open string, closeDel
 		}
 		child := n.Children[i]
 		if n.Kind == KindObject {
-			out.WriteString(FormatKey(child.Key) + ": ")
+			out.WriteString(FormatKey(child.Key))
+			out.WriteString(": ")
 		}
 		out.WriteString(Preview(child, maxItems, maxDepth-1))
 	}

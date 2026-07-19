@@ -13,6 +13,12 @@ func TestKeyBindingsListsAllBindings(t *testing.T) {
 		"j, down",
 		"k, up",
 		"space, enter",
+		"/",
+		"search",
+		"n",
+		"next match",
+		"p",
+		"previous match",
 		"?",
 		"toggle help",
 	}

@@ -10,7 +10,7 @@ trap cleanup_app EXIT
 
 wait_for "input"
 pane=$(capture)
-assert_contains "$pane" "k/↑ up • j/↓ down • space toggle • ? toggle help • q quit"
+assert_contains "$pane" "k/↑ up • j/↓ down • space toggle • / search • ? toggle help • q quit"
 assert_not_contains "$pane" "collapse/parent"
 assert_not_contains "$pane" "page up"
 
