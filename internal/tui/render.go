@@ -75,12 +75,8 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 	}
 
 	right := fmt.Sprintf("%s  %d/%d", filename, focusIndex+1, totalRows)
-	if m.searchQuery != "" {
-		matchIndex := 0
-		if len(m.searchMatches) > 0 && m.searchIndex >= 0 {
-			matchIndex = m.searchIndex + 1
-		}
-		right = fmt.Sprintf("[%d/%d]  %s", matchIndex, len(m.searchMatches), right)
+	if matchIndex, matchTotal, ok := m.search.matchPosition(); ok {
+		right = fmt.Sprintf("[%d/%d]  %s", matchIndex, matchTotal, right)
 	}
 	var text string
 	if m.width > 0 {
@@ -99,8 +95,8 @@ func (m Model) renderStatus(path string, focusIndex int) string {
 }
 
 func (m Model) renderFooter(status string) string {
-	if m.searchEditing {
-		prompt := searchPromptStyle.Render("/") + m.searchInput + searchPromptStyle.Render("█")
+	if m.search.editing() {
+		prompt := searchPromptStyle.Render("/") + m.search.input() + searchPromptStyle.Render("█")
 		if m.width > 0 {
 			prompt = ansi.Truncate(prompt, m.width, "…")
 		}
@@ -161,7 +157,7 @@ func (m Model) renderLabel(n *jsondoc.Node) string {
 	}
 	var label string
 	if n.HasKey {
-		label = m.renderSearchText(jsondoc.FormatKey(n.Key), keyStyle, n.ID, searchPartKey)
+		label = m.renderSearchText(jsondoc.FormatKey(n.Key), keyStyle, n, searchPartKey)
 	} else {
 		label = indexStyle.Render(fmt.Sprintf("[%d]", n.Index))
 	}
@@ -196,5 +192,5 @@ func (m Model) renderPrimitive(n *jsondoc.Node) string {
 	case jsondoc.KindString:
 		style = stringStyle
 	}
-	return m.renderSearchText(text, style, n.ID, searchPartValue)
+	return m.renderSearchText(text, style, n, searchPartValue)
 }

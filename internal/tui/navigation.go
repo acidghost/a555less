@@ -214,7 +214,7 @@ func (m Model) viewerHeight() int {
 		return max(1, len(m.rows))
 	}
 	footerHeight := 1 + m.helpHeight // status line + cached help view height.
-	if m.searchEditing {
+	if m.search.editing() {
 		footerHeight = 2 // status line + one-line search prompt.
 	}
 	return max(1, m.height-footerHeight)

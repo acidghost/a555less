@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"regexp"
-
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -23,22 +21,12 @@ type Model struct {
 	help       help.Model
 	helpView   string
 	helpHeight int
-
-	searchEditing       bool
-	searchInput         string
-	searchQuery         string
-	searchCaseSensitive bool
-	searchPattern       *regexp.Regexp
-	searchMatches       []searchMatch
-	searchMatchesByPart map[searchTarget][][2]int
-	searchIndex         int
-	searchHighlight     bool
-	searchCursorMoved   bool
+	search     searchState
 }
 
 // New returns a skeleton TUI model for doc.
 func New(doc *jsondoc.Document) Model {
-	m := Model{Doc: doc, focusID: -1, searchIndex: -1, help: help.New()}
+	m := Model{Doc: doc, focusID: -1, help: help.New()}
 	m.help.Styles.FullKey = helpFullKeyStyle
 	m.refreshHelp()
 	m.refreshRows()
@@ -63,7 +51,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshHelp()
 		m.ensureVisible()
 	case tea.KeyPressMsg:
-		if m.searchEditing {
+		if m.search.editing() {
 			if msg.String() == "ctrl+c" {
 				return m, tea.Quit
 			}
@@ -126,11 +114,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.expandFocusedSiblings(true)
 		}
 		if !searchJump && m.focusID != previousFocusID {
-			m.searchCursorMoved = true
+			m.search.markCursorMoved()
 		}
 	case tea.PasteMsg:
-		if m.searchEditing {
-			m.searchInput += sanitizeSearchInput(msg.Content)
+		if m.search.editing() {
+			m.search.appendInput(msg.Content)
 		}
 	}
 

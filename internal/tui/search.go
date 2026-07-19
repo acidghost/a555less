@@ -2,6 +2,7 @@ package tui
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -20,20 +21,249 @@ const (
 )
 
 type searchTarget struct {
-	nodeID int
-	part   searchPart
+	node *jsondoc.Node
+	part searchPart
 }
 
 type searchMatch struct {
 	node  *jsondoc.Node
+	order int
 	part  searchPart
 	start int
 	end   int
 }
 
+type searchDraft struct {
+	text string
+}
+
+type searchResult struct {
+	query         string
+	caseSensitive bool
+	matches       []searchMatch
+	ranges        map[searchTarget][][2]int
+	nodeOrder     map[*jsondoc.Node]int
+	current       int
+	cursorMoved   bool
+}
+
+type searchState struct {
+	draft  *searchDraft
+	result *searchResult
+}
+
+func (s *searchState) begin() {
+	s.draft = &searchDraft{}
+}
+
+func (s *searchState) cancel() {
+	s.draft = nil
+}
+
+func (s searchState) editing() bool {
+	return s.draft != nil
+}
+
+func (s searchState) input() string {
+	if s.draft == nil {
+		return ""
+	}
+	return s.draft.text
+}
+
+func (s *searchState) appendInput(text string) {
+	if s.draft == nil {
+		return
+	}
+	s.draft.text += sanitizeSearchInput(text)
+}
+
+func (s *searchState) backspace() {
+	if s.draft == nil {
+		return
+	}
+	s.draft.text = removeLastRune(s.draft.text)
+}
+
+func (s *searchState) commit(doc *jsondoc.Document, focused *jsondoc.Node) *jsondoc.Node {
+	if s.draft == nil {
+		return nil
+	}
+
+	query := s.draft.text
+	s.draft = nil
+	caseSensitive := strings.HasSuffix(query, "/s")
+	if caseSensitive {
+		query = strings.TrimSuffix(query, "/s")
+	}
+
+	pattern := compileSearchPattern(query, caseSensitive)
+	if pattern == nil || doc == nil || doc.Root == nil {
+		s.result = nil
+		return nil
+	}
+
+	result := &searchResult{
+		query:         query,
+		caseSensitive: caseSensitive,
+		ranges:        make(map[searchTarget][][2]int),
+		nodeOrder:     make(map[*jsondoc.Node]int),
+		current:       -1,
+	}
+	nextOrder := 0
+	result.collect(doc.Root, doc.JSONL, pattern, &nextOrder)
+	s.result = result
+
+	if len(result.matches) == 0 {
+		return nil
+	}
+
+	focusOrder, ok := result.nodeOrder[focused]
+	if !ok {
+		focusOrder = 0
+	}
+	result.current = sort.Search(len(result.matches), func(i int) bool {
+		return result.matches[i].order >= focusOrder
+	})
+	if result.current == len(result.matches) {
+		result.current = 0
+	}
+	return result.matches[result.current].node
+}
+
+func (r *searchResult) collect(n *jsondoc.Node, skip bool, pattern *regexp.Regexp, nextOrder *int) {
+	if n == nil {
+		return
+	}
+
+	order := *nextOrder
+	*nextOrder = order + 1
+	r.nodeOrder[n] = order
+
+	if !skip {
+		if n.HasKey {
+			r.appendMatches(n, order, searchPartKey, jsondoc.FormatKey(n.Key), pattern)
+		}
+		if !n.IsContainer() {
+			r.appendMatches(n, order, searchPartValue, jsondoc.FormatPrimitive(n), pattern)
+		}
+	}
+
+	for _, child := range n.Children {
+		r.collect(child, false, pattern, nextOrder)
+	}
+}
+
+func (r *searchResult) appendMatches(node *jsondoc.Node, order int, part searchPart, text string, pattern *regexp.Regexp) {
+	target := searchTarget{node: node, part: part}
+	for _, matchRange := range searchMatchRanges(text, pattern) {
+		r.matches = append(r.matches, searchMatch{
+			node:  node,
+			order: order,
+			part:  part,
+			start: matchRange[0],
+			end:   matchRange[1],
+		})
+		r.ranges[target] = append(r.ranges[target], matchRange)
+	}
+}
+
+func (s *searchState) move(delta int, focused *jsondoc.Node) *jsondoc.Node {
+	result := s.result
+	if result == nil || len(result.matches) == 0 {
+		return nil
+	}
+
+	if result.cursorMoved || !result.currentMatchIsFocused(focused) {
+		result.current = result.closestMatch(delta, focused)
+	} else {
+		result.current = (result.current + delta) % len(result.matches)
+		if result.current < 0 {
+			result.current += len(result.matches)
+		}
+	}
+	result.cursorMoved = false
+	return result.matches[result.current].node
+}
+
+func (r searchResult) currentMatchIsFocused(focused *jsondoc.Node) bool {
+	return r.current >= 0 &&
+		r.current < len(r.matches) &&
+		r.matches[r.current].node == focused
+}
+
+func (r searchResult) closestMatch(delta int, focused *jsondoc.Node) int {
+	focusOrder, ok := r.nodeOrder[focused]
+	if !ok {
+		if delta >= 0 {
+			return 0
+		}
+		return len(r.matches) - 1
+	}
+
+	if delta >= 0 {
+		i := sort.Search(len(r.matches), func(i int) bool {
+			return r.matches[i].order > focusOrder
+		})
+		if i == len(r.matches) {
+			return 0
+		}
+		return i
+	}
+
+	i := sort.Search(len(r.matches), func(i int) bool {
+		return r.matches[i].order >= focusOrder
+	}) - 1
+	if i < 0 {
+		return len(r.matches) - 1
+	}
+	return i
+}
+
+func (s *searchState) markCursorMoved() {
+	if s.result != nil {
+		s.result.cursorMoved = true
+	}
+}
+
+func (s searchState) highlighting() bool {
+	return s.result != nil
+}
+
+func (s searchState) query() string {
+	if s.result == nil {
+		return ""
+	}
+	return s.result.query
+}
+
+func (s searchState) matchPosition() (current, total int, ok bool) {
+	if s.result == nil {
+		return 0, 0, false
+	}
+	if s.result.current >= 0 {
+		current = s.result.current + 1
+	}
+	return current, len(s.result.matches), true
+}
+
+func (s searchState) ranges(node *jsondoc.Node, part searchPart) [][2]int {
+	if s.result == nil {
+		return nil
+	}
+	return s.result.ranges[searchTarget{node: node, part: part}]
+}
+
+func (s searchState) isCurrent(node *jsondoc.Node, part searchPart, start, end int) bool {
+	if s.result == nil || s.result.current < 0 || s.result.current >= len(s.result.matches) {
+		return false
+	}
+	current := s.result.matches[s.result.current]
+	return current.node == node && current.part == part && current.start == start && current.end == end
+}
+
 func (m *Model) startSearch() {
-	m.searchEditing = true
-	m.searchInput = ""
+	m.search.begin()
 	m.ensureVisible()
 }
 
@@ -44,145 +274,39 @@ func (m *Model) updateSearch(msg tea.KeyPressMsg) {
 	case tea.KeyEscape:
 		m.cancelSearch()
 	case tea.KeyBackspace, tea.KeyDelete:
-		m.searchInput = removeLastRune(m.searchInput)
+		m.search.backspace()
 	default:
-		m.searchInput += msg.Key().Text
+		m.search.appendInput(msg.Key().Text)
 	}
 }
 
 func (m *Model) cancelSearch() {
-	m.searchEditing = false
-	m.searchInput = ""
+	m.search.cancel()
 	m.ensureVisible()
 }
 
 func (m *Model) applySearch() {
-	m.searchEditing = false
-	m.searchQuery = m.searchInput
-	m.searchCaseSensitive = strings.HasSuffix(m.searchQuery, "/s")
-	if m.searchCaseSensitive {
-		m.searchQuery = strings.TrimSuffix(m.searchQuery, "/s")
-	}
-	m.searchInput = ""
-	m.searchPattern = compileSearchPattern(m.searchQuery, m.searchCaseSensitive)
-	m.searchMatches = nil
-	m.searchMatchesByPart = make(map[searchTarget][][2]int)
-	m.searchIndex = -1
-	m.searchHighlight = false
-	m.searchCursorMoved = false
-
-	if m.searchPattern == nil || m.Doc == nil || m.Doc.Root == nil {
-		m.ensureVisible()
+	target := m.search.commit(m.Doc, m.focusedNode())
+	if target != nil {
+		m.focusSearchNode(target)
 		return
 	}
-
-	m.collectSearchMatches(m.Doc.Root, m.Doc.JSONL)
-	m.searchHighlight = true
-	if len(m.searchMatches) == 0 {
-		m.ensureVisible()
-		return
-	}
-
-	// Start at the first occurrence on or after the focused node, wrapping to
-	// the beginning when the cursor is below the final match.
-	m.searchIndex = 0
-	for i, match := range m.searchMatches {
-		if match.node.ID >= m.focusID {
-			m.searchIndex = i
-			break
-		}
-	}
-	m.focusSearchMatch()
-}
-
-func (m *Model) collectSearchMatches(n *jsondoc.Node, skip bool) {
-	if n == nil {
-		return
-	}
-
-	if !skip {
-		if n.HasKey {
-			m.appendSearchMatches(n, searchPartKey, jsondoc.FormatKey(n.Key))
-		}
-		if !n.IsContainer() {
-			m.appendSearchMatches(n, searchPartValue, jsondoc.FormatPrimitive(n))
-		}
-	}
-
-	for _, child := range n.Children {
-		m.collectSearchMatches(child, false)
-	}
-}
-
-func (m *Model) appendSearchMatches(node *jsondoc.Node, part searchPart, text string) {
-	target := searchTarget{nodeID: node.ID, part: part}
-	for _, matchRange := range searchMatchRanges(text, m.searchPattern) {
-		m.searchMatches = append(m.searchMatches, searchMatch{
-			node:  node,
-			part:  part,
-			start: matchRange[0],
-			end:   matchRange[1],
-		})
-		m.searchMatchesByPart[target] = append(m.searchMatchesByPart[target], matchRange)
-	}
+	m.ensureVisible()
 }
 
 func (m *Model) moveSearch(delta int) {
-	if m.searchQuery == "" {
-		return
+	target := m.search.move(delta, m.focusedNode())
+	if target != nil {
+		m.focusSearchNode(target)
 	}
-	m.searchHighlight = true
-	if len(m.searchMatches) == 0 {
-		return
-	}
-
-	if m.searchCursorMoved || !m.currentSearchMatchIsFocused() {
-		m.searchIndex = m.closestSearchMatch(delta)
-	} else {
-		m.searchIndex = (m.searchIndex + delta) % len(m.searchMatches)
-		if m.searchIndex < 0 {
-			m.searchIndex += len(m.searchMatches)
-		}
-	}
-	m.focusSearchMatch()
 }
 
-func (m Model) currentSearchMatchIsFocused() bool {
-	return m.searchIndex >= 0 &&
-		m.searchIndex < len(m.searchMatches) &&
-		m.searchMatches[m.searchIndex].node.ID == m.focusID
-}
-
-func (m Model) closestSearchMatch(delta int) int {
-	if delta >= 0 {
-		for i, match := range m.searchMatches {
-			if match.node.ID > m.focusID {
-				return i
-			}
-		}
-		return 0
-	}
-
-	for i := len(m.searchMatches) - 1; i >= 0; i-- {
-		if m.searchMatches[i].node.ID < m.focusID {
-			return i
-		}
-	}
-	return len(m.searchMatches) - 1
-}
-
-func (m *Model) focusSearchMatch() {
-	if m.searchIndex < 0 || m.searchIndex >= len(m.searchMatches) {
-		return
-	}
-
-	match := m.searchMatches[m.searchIndex]
-	for parent := match.node.Parent; parent != nil; parent = parent.Parent {
+func (m *Model) focusSearchNode(n *jsondoc.Node) {
+	for parent := n.Parent; parent != nil; parent = parent.Parent {
 		parent.Collapsed = false
 	}
 	m.refreshRows()
-	m.focusID = match.node.ID
-	m.searchCursorMoved = false
+	m.focusID = n.ID
 	m.ensureVisible()
 }
 
@@ -231,12 +355,12 @@ func sanitizeSearchInput(s string) string {
 	}, s)
 }
 
-func (m Model) renderSearchText(text string, base lipgloss.Style, nodeID int, part searchPart) string {
-	if !m.searchHighlight || m.searchQuery == "" {
+func (m Model) renderSearchText(text string, base lipgloss.Style, node *jsondoc.Node, part searchPart) string {
+	if !m.search.highlighting() {
 		return base.Render(text)
 	}
 
-	ranges := m.searchMatchesByPart[searchTarget{nodeID: nodeID, part: part}]
+	ranges := m.search.ranges(node, part)
 	if len(ranges) == 0 {
 		return base.Render(text)
 	}
@@ -246,7 +370,7 @@ func (m Model) renderSearchText(text string, base lipgloss.Style, nodeID int, pa
 	for _, matchRange := range ranges {
 		out.WriteString(base.Render(text[pos:matchRange[0]]))
 		style := base.Background(searchMatchBackground).Foreground(searchMatchForeground)
-		if m.isCurrentSearchMatch(nodeID, part, matchRange[0], matchRange[1]) {
+		if m.search.isCurrent(node, part, matchRange[0], matchRange[1]) {
 			style = style.Background(searchCurrentBackground).Bold(true)
 		}
 		out.WriteString(style.Render(text[matchRange[0]:matchRange[1]]))
@@ -254,12 +378,4 @@ func (m Model) renderSearchText(text string, base lipgloss.Style, nodeID int, pa
 	}
 	out.WriteString(base.Render(text[pos:]))
 	return out.String()
-}
-
-func (m Model) isCurrentSearchMatch(nodeID int, part searchPart, start, end int) bool {
-	if m.searchIndex < 0 || m.searchIndex >= len(m.searchMatches) {
-		return false
-	}
-	current := m.searchMatches[m.searchIndex]
-	return current.node.ID == nodeID && current.part == part && current.start == start && current.end == end
 }
