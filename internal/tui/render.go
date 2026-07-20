@@ -102,6 +102,16 @@ func (m Model) renderFooter(status string) string {
 		}
 		return status + "\n" + prompt
 	}
+	if m.printPending {
+		return status + "\n" + printPromptStyle.Render("p█")
+	}
+	if m.message != "" {
+		message := warningStyle.Render(m.message)
+		if m.width > 0 {
+			message = ansi.Truncate(message, m.width, "…")
+		}
+		return status + "\n" + message
+	}
 	if m.helpView == "" {
 		return status
 	}

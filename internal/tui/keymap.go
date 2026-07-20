@@ -31,6 +31,9 @@ type keyMap struct {
 	Search       key.Binding
 	NextMatch    key.Binding
 	PrevMatch    key.Binding
+	PrintPretty  key.Binding
+	PrintString  key.Binding
+	PrintQuery   key.Binding
 	Help         key.Binding
 }
 
@@ -40,10 +43,9 @@ func (k keyMap) ShortHelp() []key.Binding {
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right, k.Toggle},
-		{k.Top, k.Bottom, k.PageUp, k.PageDown, k.HalfUp, k.HalfDown},
-		{k.Parent, k.NextSib, k.PrevSib, k.Collapse, k.CollapseDeep},
-		{k.Expand, k.ExpandDeep, k.Search, k.NextMatch, k.PrevMatch, k.Help, k.Quit},
+		{k.Up, k.Down, k.Left, k.Right, k.Toggle, k.Top, k.Bottom, k.PrintPretty, k.Help},
+		{k.PageUp, k.PageDown, k.HalfUp, k.HalfDown, k.Parent, k.NextSib, k.PrevSib, k.PrintString, k.Quit},
+		{k.Collapse, k.CollapseDeep, k.Expand, k.ExpandDeep, k.Search, k.NextMatch, k.PrevMatch, k.PrintQuery},
 	}
 }
 
@@ -133,8 +135,20 @@ var keys = keyMap{
 		key.WithHelp("n", "next match"),
 	),
 	PrevMatch: key.NewBinding(
-		key.WithKeys("p", "N"),
-		key.WithHelp("p/N", "previous match"),
+		key.WithKeys("N"),
+		key.WithHelp("N", "previous match"),
+	),
+	PrintPretty: key.NewBinding(
+		key.WithKeys("pp"),
+		key.WithHelp("pp", "print pretty value"),
+	),
+	PrintString: key.NewBinding(
+		key.WithKeys("ps"),
+		key.WithHelp("ps", "print string contents"),
+	),
+	PrintQuery: key.NewBinding(
+		key.WithKeys("pq"),
+		key.WithHelp("pq", "print jq query"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),

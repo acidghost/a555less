@@ -13,15 +13,17 @@ import (
 type Model struct {
 	Doc *jsondoc.Document
 
-	width      int
-	height     int
-	focusID    int
-	top        int
-	rows       []jsondoc.Row
-	help       help.Model
-	helpView   string
-	helpHeight int
-	search     searchState
+	width        int
+	height       int
+	focusID      int
+	top          int
+	rows         []jsondoc.Row
+	help         help.Model
+	helpView     string
+	helpHeight   int
+	search       searchState
+	printPending bool
+	message      string
 }
 
 // New returns a skeleton TUI model for doc.
@@ -50,6 +52,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.SetWidth(msg.Width)
 		m.refreshHelp()
 		m.ensureVisible()
+	case printFinishedMsg:
+		if msg.err != nil {
+			m.message = msg.err.Error()
+		} else {
+			m.message = ""
+		}
 	case tea.KeyPressMsg:
 		if m.search.editing() {
 			if msg.String() == "ctrl+c" {
@@ -58,10 +66,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateSearch(msg)
 			return m, nil
 		}
+		if m.printPending {
+			m.printPending = false
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+			target, ok := printTargetForKey(msg.String())
+			if !ok {
+				return m, nil
+			}
+			content, err := printContent(m.Doc, m.focusedNode(), target)
+			if err != nil {
+				m.message = err.Error()
+				return m, nil
+			}
+			return m, printTerminal(content)
+		}
 
+		m.message = ""
 		previousFocusID := m.focusID
 		searchJump := false
 		switch {
+		case msg.String() == "p":
+			m.printPending = true
 		case key.Matches(msg, keys.NextMatch):
 			searchJump = true
 			m.moveSearch(1)

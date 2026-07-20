@@ -37,7 +37,7 @@ send_keys n
 wait_for "[2/2]"
 send_keys G
 wait_for "22/22"
-send_keys p
+send_keys N
 wait_for "5/22"
 pane=$(capture)
 assert_contains "$pane" "[2/2]"

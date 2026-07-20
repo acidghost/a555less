@@ -126,7 +126,7 @@ func TestPreviousMatchUsesManualCursorPosition(t *testing.T) {
 
 	updated, _ := m.Update(tea.KeyPressMsg(tea.Key{Code: 'j', Text: "j"}))
 	m = updated.(Model)
-	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: 'p', Text: "p"}))
+	updated, _ = m.Update(tea.KeyPressMsg(tea.Key{Code: 'N', Text: "N"}))
 	m = updated.(Model)
 
 	// The closest previous result is the final occurrence on input.needle,
