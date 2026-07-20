@@ -13,6 +13,7 @@ run: \
     help-expanded \
     help-simple \
     navigation \
+    print \
     search \
     smoke \
     smoke-jsonl
@@ -32,6 +33,10 @@ help-simple:
 # Test.
 navigation:
     ./test_navigation.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
+
+# Test printing values on the main screen.
+print:
+    ./test_print.sh "{{file}}" "{{session}}" "{{width}}" "{{height}}"
 
 # Test search and match navigation.
 search:

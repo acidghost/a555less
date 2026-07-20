@@ -21,6 +21,8 @@ var (
 	statusStyle             = lipgloss.NewStyle().Foreground(ColorLavander)
 	helpFullKeyStyle        = lipgloss.NewStyle().Foreground(ColorBlue)
 	searchPromptStyle       = lipgloss.NewStyle().Foreground(ColorPink).Bold(true)
+	printPromptStyle        = lipgloss.NewStyle().Foreground(ColorPink).Bold(true)
+	warningStyle            = lipgloss.NewStyle().Foreground(ColorPink)
 	searchMatchForeground   = lipgloss.Color("0")
 	searchMatchBackground   = lipgloss.Color("220")
 	searchCurrentBackground = lipgloss.Color("229")

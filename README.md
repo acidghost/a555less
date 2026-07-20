@@ -58,7 +58,10 @@ e                         expand siblings
 E, shift+e                deep expand siblings
 /                         search
 n                         next match
-p                         previous match
+N                         previous match
+pp                        print focused value, pretty-printed
+ps                        print focused string contents
+pq                        print jq query for focused value
 ?                         toggle help
 ```
 
