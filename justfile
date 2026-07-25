@@ -10,6 +10,7 @@ ldflags := '-s -w -X main.buildVersion='+version \
 
 goos := if os() == 'macos' { 'darwin' } else { os() }
 goarch := if arch() == 'aarch64' { 'arm64' } else if arch() == 'x86_64' { 'amd64' } else { arch() }
+install_prefix := `go env GOBIN`
 
 shell_files := shell("find . -name '*.sh' -not -path '*/vendor/*' | tr '\\n' ' '")
 
@@ -67,7 +68,7 @@ lint-sh:
 
 # Install into GOBIN
 install: build
-    cp -v './build/{{program}}-{{goos}}-{{goarch}}' "$(go env GOBIN)/{{program}}"
+    cp -v './build/{{program}}-{{goos}}-{{goarch}}' "{{install_prefix}}/{{program}}"
 
 # Clean up build output
 clean:
