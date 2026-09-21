@@ -2,7 +2,7 @@ module github.com/acidghost/a555less
 
 go 1.25.8
 
-toolchain go1.26.6
+toolchain go1.27.1
 
 require (
 	charm.land/bubbles/v2 v2.2.1
