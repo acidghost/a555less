@@ -1,6 +1,9 @@
 package jsondoc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -176,12 +179,45 @@ func TestParseJSONLErrorIncludesLine(t *testing.T) {
 }
 
 func TestParseSyntaxErrorIncludesLineAndColumn(t *testing.T) {
-	_, err := Parse([]byte("{\n  \"a\": \n}"), "invalid.json")
-	if err == nil {
-		t.Fatal("Parse() error = nil, want syntax error")
+	data := []byte("{\n  \"a\": \n}")
+	_, err := Parse(data, "invalid.json")
+	var syntaxErr *json.SyntaxError
+	if !errors.As(err, &syntaxErr) {
+		t.Fatalf("Parse() error = %v, want wrapped *json.SyntaxError", err)
 	}
-	if !strings.Contains(err.Error(), "line 2, column 8") {
-		t.Fatalf("Parse() error = %q, want line and column", err.Error())
+
+	// Decoder offsets differ between Go versions. Check that we annotate the
+	// reported offset; TestLineColumn covers the conversion independently.
+	line, column := lineColumn(data, syntaxErr.Offset)
+	want := fmt.Sprintf("invalid JSON at line %d, column %d: %s", line, column, syntaxErr)
+	if err.Error() != want {
+		t.Fatalf("Parse() error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestLineColumn(t *testing.T) {
+	data := []byte("{\n  \"a\": \n}")
+	for _, tt := range []struct {
+		name   string
+		offset int64
+		line   int
+		column int
+	}{
+		{"negative offset", -1, 1, 1},
+		{"zero offset", 0, 1, 1},
+		{"first byte", 1, 1, 1},
+		{"newline", 2, 1, 2},
+		{"after newline", 3, 2, 1},
+		{"legacy missing value offset", 10, 2, 8},
+		{"v2 missing value offset", 11, 3, 1},
+		{"end of input", 12, 3, 2},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			line, column := lineColumn(data, tt.offset)
+			if line != tt.line || column != tt.column {
+				t.Fatalf("lineColumn(%q, %d) = (%d, %d), want (%d, %d)", data, tt.offset, line, column, tt.line, tt.column)
+			}
+		})
 	}
 }
 
