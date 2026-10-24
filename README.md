@@ -3,19 +3,24 @@
 # a555less
 
 [![CI](https://github.com/acidghost/a555less/actions/workflows/ci.yaml/badge.svg)](https://github.com/acidghost/a555less/actions/workflows/ci.yaml)
-[![Nightly](https://github.com/acidghost/a555less/actions/workflows/nightly.yaml/badge.svg)](https://github.com/acidghost/a555less/actions/workflows/nightly.yaml)
+[![Release](https://github.com/acidghost/a555less/actions/workflows/release.yaml/badge.svg)](https://github.com/acidghost/a555less/actions/workflows/release.yaml)
 
 A small Go terminal JSON viewer inspired by the data-mode subset of [`jless`](https://github.com/PaulJuliusMartinez/jless).
 
 ## Install
 
-Nightly binaries are published to GitHub Releases for macOS and Linux (`arm64`, `amd64`):
+Versioned binaries are published to [GitHub Releases](https://github.com/acidghost/a555less/releases)
+for macOS (`arm64`) and Linux (`arm64`, `amd64`). With Go and the GitHub CLI installed:
 
 ```sh
 os=$(go env GOOS); arch=$(go env GOARCH)
-gh release download --repo acidghost/a555less --pattern "a555less-$os-$arch.tar.gz"
-tar -xzf "a555less-$os-$arch.tar.gz"
-install "a555less-$os-$arch" ~/.local/bin/a555less
+tag=$(gh release view --repo acidghost/a555less --json tagName --jq .tagName)
+archive="a555less_${tag#v}_${os}-${arch}.tar.gz"
+gh release download "$tag" --repo acidghost/a555less --pattern "$archive"
+gh attestation verify "$archive" --repo acidghost/a555less
+tar -xzf "$archive" a555less
+mkdir -p ~/.local/bin
+install a555less ~/.local/bin/a555less
 ```
 
 Or build from source:
