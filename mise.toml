@@ -4,8 +4,12 @@ lockfile = true
 pin = true
 
 [tools]
+go = "1.27.3"
 golangci-lint = "2.15.0"
 just = "1.59.0"
 shellcheck = "0.11.0"
 shfmt = "3.14.1"
 watchexec = "2.8.0"
+
+[env]
+GOTOOLCHAIN = "local"
